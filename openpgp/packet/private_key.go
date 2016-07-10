@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/openpgp/elgamal"
-	"golang.org/x/crypto/openpgp/internal/encoding"
 	"golang.org/x/crypto/openpgp/errors"
+	"golang.org/x/crypto/openpgp/internal/encoding"
 	"golang.org/x/crypto/openpgp/s2k"
 )
 
