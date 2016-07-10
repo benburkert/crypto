@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/crypto/openpgp/ecdh"
 	"golang.org/x/crypto/openpgp/elgamal"
 	"golang.org/x/crypto/openpgp/errors"
 	"golang.org/x/crypto/openpgp/internal/encoding"
@@ -60,6 +61,13 @@ func NewElGamalPrivateKey(currentTime time.Time, priv *elgamal.PrivateKey) *Priv
 func NewECDSAPrivateKey(currentTime time.Time, priv *ecdsa.PrivateKey) *PrivateKey {
 	pk := new(PrivateKey)
 	pk.PublicKey = *NewECDSAPublicKey(currentTime, &priv.PublicKey)
+	pk.PrivateKey = priv
+	return pk
+}
+
+func NewECDHPrivateKey(currentTime time.Time, priv *ecdh.PrivateKey) *PrivateKey {
+	pk := new(PrivateKey)
+	pk.PublicKey = *NewECDHPublicKey(currentTime, &priv.PublicKey)
 	pk.PrivateKey = priv
 	return pk
 }
@@ -268,6 +276,8 @@ func (pk *PrivateKey) parsePrivateKey(data []byte) (err error) {
 		return pk.parseElGamalPrivateKey(data)
 	case PubKeyAlgoECDSA:
 		return pk.parseECDSAPrivateKey(data)
+	case PubKeyAlgoECDH:
+		return pk.parseECDHPrivateKey(data)
 	}
 	panic("impossible")
 }
@@ -359,6 +369,26 @@ func (pk *PrivateKey) parseECDSAPrivateKey(data []byte) (err error) {
 
 	ecdsaPriv.D = new(big.Int).SetBytes(d.Bytes())
 	pk.PrivateKey = ecdsaPriv
+	pk.Encrypted = false
+	pk.encryptedData = nil
+
+	return nil
+}
+
+func (pk *PrivateKey) parseECDHPrivateKey(data []byte) (err error) {
+	ecdhPub := pk.PublicKey.PublicKey.(*ecdh.PublicKey)
+	ecdhPriv := new(ecdh.PrivateKey)
+	ecdhPriv.PublicKey = *ecdhPub
+
+	buf := bytes.NewBuffer(data)
+	d := new(encoding.MPI)
+	if _, err := d.ReadFrom(buf); err != nil {
+		panic(err)
+		return err
+	}
+	ecdhPriv.D = d.Bytes()
+
+	pk.PrivateKey = ecdhPriv
 	pk.Encrypted = false
 	pk.encryptedData = nil
 
